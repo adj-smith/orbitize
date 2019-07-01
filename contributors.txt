@@ -11,3 +11,5 @@ Devin Cody -- wrote c implementation of kepler module
 Isabel Angelo -- collaboratively wrote OFTI sampler and tutorial
 
 Logan Pearce -- assisted with OFTI code and provided test data
+
+Jean-Baptiste Ruffio -- helped with planet RV feature
