@@ -15,6 +15,8 @@ class System(object):
         plx (float): mean parallax of the system, in mas
         mass_err (float, optional): uncertainty on ``system_mass``, in M_sol
         plx_err (float, optional): uncertainty on ``plx``, in mas
+        sysrv (float, optional): Radial velocity of the barycenter of the system (default 0km/s), in km/s
+        sysrv_err (float, optional): Uncertainty of the radial velocity of the barycenter of the system, in km/s
         restrict_angle_ranges (bool, optional): if True, restrict the ranges
             of the position angle of nodes and argument of periastron to [0,180)
             to get rid of symmetric double-peaks for imaging-only datasets.
@@ -42,7 +44,7 @@ class System(object):
     Written: Sarah Blunt, Henry Ngo, Jason Wang, 2018
     """
     def __init__(self, num_secondary_bodies, data_table, system_mass,
-                 plx, mass_err=0, plx_err=0, restrict_angle_ranges=None,
+                 plx, mass_err=0, plx_err=0, sysrv=0, sysrv_err=0, restrict_angle_ranges=None,
                  tau_ref_epoch=58849, fit_secondary_mass=False, results=None):
 
         self.num_secondary_bodies = num_secondary_bodies
@@ -71,8 +73,12 @@ class System(object):
         # List of arrays of indices corresponding to epochs in SEP/PA for each body
         self.seppa = []
 
+        # List of arrays of indices corresponding to epochs in SEP/PA for each body
+        self.rv = []
+
         radec_indices = np.where(self.data_table['quant_type']=='radec')
         seppa_indices = np.where(self.data_table['quant_type']=='seppa')
+        rv_indices = np.where(self.data_table['quant_type']=='rv')
 
         for body_num in np.arange(self.num_secondary_bodies+1):
 
@@ -86,7 +92,9 @@ class System(object):
             self.seppa.append(
                 np.intersect1d(self.body_indices[body_num], seppa_indices)
             )
-
+            self.rv.append(
+                np.intersect1d(self.body_indices[body_num], rv_indices)
+            )
 
         if (len(radec_indices) + len(seppa_indices) == len(self.data_table)) and (restrict_angle_ranges is None):
             restrict_angle_ranges = True
@@ -126,15 +134,21 @@ class System(object):
             self.labels.append('epp{}'.format(body+1))
 
         #
-        # Set priors on total mass and parallax
+        # Set priors on total mass, parallax, and the radial velocity of the barycenter of the system
         #
         self.labels.append('plx')
+        self.labels.append('sysrv')
         self.labels.append('mtot')
         if plx_err > 0:
             self.sys_priors.append(priors.GaussianPrior(plx, plx_err))
         else:
             self.sys_priors.append(plx)
-        
+
+        if sysrv_err > 0:
+            self.sys_priors.append(priors.GaussianPrior(sysrv, sysrv_err, no_negatives=False))
+        else:
+            self.sys_priors.append(sysrv)
+
         if self.fit_secondary_mass:
             for body in np.arange(num_secondary_bodies):
                     self.sys_priors.append(priors.JeffreysPrior(1e-6, 1)) # in Solar masses for onw
@@ -179,6 +193,7 @@ class System(object):
             lan = params_arr[body_num+3]
             tau = params_arr[body_num+4]
             plx = params_arr[6*self.num_secondary_bodies]
+            sysrv = params_arr[6*self.num_secondary_bodies+1]
 
             # import pdb; pdb.set_trace()
 
@@ -206,7 +221,9 @@ class System(object):
                 model[self.seppa[body_num], 0] = sep
                 model[self.seppa[body_num], 1] = pa
 
-            # TODO: add RV model stuff here.
+            if len(raoff[self.rv[body_num]]) > 0:
+                model[self.rv[body_num], 0] = vz[self.rv[body_num]]+sysrv
+                model[self.rv[body_num], 1] = np.nan
 
         return model
 

@@ -22,6 +22,8 @@ class Driver(object):
         plx (float): mean parallax of the system [mas]
         mass_err (float, optional): uncertainty on ``system_mass`` [M_sol]
         plx_err (float, optional): uncertainty on ``plx`` [mas]
+        sysrv (float, optional): Radial velocity of the barycenter of the system (default 0km/s), in km/s
+        sysrv_err (float, optional): Uncertainty of the radial velocity of the barycenter of the system, in km/s
         lnlike (str, optional): name of function in ``orbitize.lnlike`` that will
             be used to compute likelihood. (default="chi2_lnlike")
         system_kwargs (dict, optional): ``restrict_angle_ranges``, ``ref_tau_epoch``, 
@@ -33,7 +35,7 @@ class Driver(object):
     """
     def __init__(self, input_data, sampler_str,
                  num_secondary_bodies, system_mass, plx,
-                 mass_err=0, plx_err=0, lnlike='chi2_lnlike', 
+                 mass_err=0, plx_err=0, sysrv=0, sysrv_err=0, lnlike='chi2_lnlike',
                  system_kwargs=None, mcmc_kwargs=None):
 
         # Read in data
@@ -54,7 +56,7 @@ class Driver(object):
         # Initialize System object which stores data & sets priors
         self.system = orbitize.system.System(
             num_secondary_bodies, data_table, system_mass,
-            plx, mass_err=mass_err, plx_err=plx_err, **system_kwargs
+            plx, mass_err=mass_err, plx_err=plx_err, sysrv=sysrv,sysrv_err=sysrv_err, **system_kwargs
         )
 
         # Initialize Sampler object, which stores information about
