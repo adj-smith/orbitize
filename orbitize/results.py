@@ -314,7 +314,8 @@ class Results(object):
                     num_orbits_to_plot=100, num_epochs_to_plot=100,
                     square_plot=True, show_colorbar=True, cmap=cmap,
                     sep_pa_color='lightgrey', sep_pa_end_year=2025.0,
-                    cbar_param='epochs'):
+                    cbar_param='epochs',
+                    data_table=None):
 
         """
         Plots one orbital period for a select number of fitted orbits
@@ -346,6 +347,7 @@ class Results(object):
                 tracks in the Sep/PA panels (default: 2025.0).
             cbar_param (string): options are the following: epochs, sma1, ecc1, inc1, aop1,
                 pan1, tau1. Number can be switched out. Default is epochs.
+            data_table  (astropy.table.Table): output from ``orbitize.read_input.read_file()``
 
         Return:
             ``matplotlib.pyplot.Figure``: the orbit plot if input is valid, ``None`` otherwise
@@ -355,6 +357,11 @@ class Results(object):
         Additions by Malena Rice, 2019
 
         """
+
+        if data_table is not None:
+            radec_indices = np.where(data_table['quant_type']=='radec')
+            seppa_indices = np.where(data_table['quant_type']=='seppa')
+            rv_indices = np.where(data_table['quant_type']=='rv')
 
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', ErfaWarning)
@@ -481,6 +488,9 @@ class Results(object):
             ax.locator_params(axis='x', nbins=6)
             ax.locator_params(axis='y', nbins=6)
 
+            if data_table is not None:
+                plt.errorbar(data_table["quant1"][radec_indices],data_table["quant2"][radec_indices],xerr=data_table["quant1_err"][radec_indices],yerr=data_table["quant2_err"][radec_indices],fmt="x",color="red")
+
             # add colorbar
             if show_colorbar:
                 cbar_ax = fig.add_axes([0.47, 0.15, 0.015, 0.7]) # xpos, ypos, width, height, in fraction of figure size
@@ -539,7 +549,9 @@ class Results(object):
                     object_to_plot=1, start_mjd=51544.,
                     num_orbits_to_plot=100, num_epochs_to_plot=100, show_colorbar=True, cmap=cmap,
                     end_year = 2025.0,
-                    cbar_param='epochs'):
+                    cbar_param='epochs',
+                    data_table=None
+                 ):
 
         """
         Plots one orbital period for a select number of fitted orbits
@@ -567,6 +579,7 @@ class Results(object):
             end_year (float): decimal year specifying when to stop plotting (default: 2025.0).
             cbar_param (string): options are the following: epochs, sma1, ecc1, inc1, aop1,
                 pan1, tau1. Number can be switched out. Default is epochs.
+            data_table  (astropy.table.Table): output from ``orbitize.read_input.read_file()``
 
         Return:
             ``matplotlib.pyplot.Figure``: the orbit plot if input is valid, ``None`` otherwise
@@ -576,6 +589,10 @@ class Results(object):
         plot_rvs() adapted from plot_orbits() by Jean-Baptiste Ruffio 2019
 
         """
+        if data_table is not None:
+            radec_indices = np.where(data_table['quant_type']=='radec')
+            seppa_indices = np.where(data_table['quant_type']=='seppa')
+            rv_indices = np.where(data_table['quant_type']=='rv')
 
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', ErfaWarning)
@@ -676,6 +693,7 @@ class Results(object):
 
             ax = plt.gca()
             ax2 = ax.twiny()
+            plt.sca(ax)
 
             # Plot each orbit (each segment between two points coloured using colormap)
             for i in np.arange(num_orbits_to_plot):
@@ -695,6 +713,9 @@ class Results(object):
             ax.set_ylabel('Planet RV [km/s]')
             ax.locator_params(axis='x', nbins=6)
             ax.locator_params(axis='y', nbins=6)
+
+            if data_table is not None:
+                plt.errorbar(data_table["epoch"][rv_indices],data_table["quant1"][rv_indices],yerr=data_table["quant1_err"][rv_indices],fmt="x",color="red")
 
             # # add colorbar
             if show_colorbar:
