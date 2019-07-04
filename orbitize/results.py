@@ -239,6 +239,7 @@ class Results(object):
                     epp1: epoch of periastron passage
                     [repeat for 2, 3, 4, etc if multiple objects]
                     mtot: total mass
+                    sysrv: system rv
                     plx:  parallax
 
             **corner_kwargs: any remaining keyword args are sent to ``corner.corner``.
@@ -279,13 +280,19 @@ class Results(object):
             num_orb_param = self.post.shape[1] # number of orbital parameters (+ mass, parallax)
             num_objects,remainder = np.divmod(num_orb_param,6)
             have_mtot_and_plx = remainder == 2
+            have_mtot_and_plx_and_sysrv = remainder == 3
             param_indices = []
             for param in param_list:
+                if param=='sysrv':
+                    if have_mtot_and_plx_and_sysrv:
+                        param_indices.append(num_orb_param-2) # the 2nd last index
                 if param=='plx':
                     if have_mtot_and_plx:
                         param_indices.append(num_orb_param-2) # the 2nd last index
+                    elif have_mtot_and_plx_and_sysrv:
+                        param_indices.append(num_orb_param-3) # the 2nd last index
                 elif param=='mtot':
-                    if have_mtot_and_plx:
+                    if have_mtot_and_plx or have_mtot_and_plx_and_sysrv:
                         param_indices.append(num_orb_param-1) # the last index
                 elif len(param)==4: # to prevent invalid, short param names breaking
                     if param[0:3] in dict_of_indices:
@@ -489,7 +496,24 @@ class Results(object):
             ax.locator_params(axis='y', nbins=6)
 
             if data_table is not None:
-                plt.errorbar(data_table["quant1"][radec_indices],data_table["quant2"][radec_indices],xerr=data_table["quant1_err"][radec_indices],yerr=data_table["quant2_err"][radec_indices],fmt="x",color="red")
+                plt.errorbar(data_table["quant1"][radec_indices],data_table["quant2"][radec_indices],
+                             xerr=data_table["quant1_err"][radec_indices],
+                             yerr=data_table["quant2_err"][radec_indices],fmt="x",color="red")
+
+                for seppa_index in seppa_indices[0]:
+                    ra_from_seppa = data_table["quant1"][seppa_index]*np.sin(np.deg2rad(data_table["quant2"][seppa_index]))
+                    dec_from_seppa = data_table["quant1"][seppa_index]*np.cos(np.deg2rad(data_table["quant2"][seppa_index]))
+                    dra_from_seppa = data_table["quant1_err"][seppa_index]*np.sin(np.deg2rad(data_table["quant2"][seppa_index]))
+                    ddec_from_seppa = data_table["quant1_err"][seppa_index]*np.cos(np.deg2rad(data_table["quant2"][seppa_index]))
+                    plt.plot(ra_from_seppa,dec_from_seppa,"o",color="orange")
+                    plt.plot([ra_from_seppa-dra_from_seppa,ra_from_seppa+dra_from_seppa],
+                             [dec_from_seppa-ddec_from_seppa,dec_from_seppa+ddec_from_seppa],color="orange", linestyle ="--")
+                    e1 = mpl.patches.Arc((0,0),2*data_table["quant1"][seppa_index],2*data_table["quant1"][seppa_index],0,
+                                         theta2=90-(data_table["quant2"][seppa_index]-data_table["quant2_err"][seppa_index]),
+                                         theta1=90-(data_table["quant2"][seppa_index]+data_table["quant2_err"][seppa_index]),
+                                         color="orange", linestyle ="--")
+                    ax.add_patch(e1)
+            ax.invert_xaxis()
 
             # add colorbar
             if show_colorbar:
@@ -541,6 +565,44 @@ class Results(object):
             ax1.locator_params(axis='y', nbins=6)
             ax2.locator_params(axis='x', nbins=6)
             ax2.locator_params(axis='y', nbins=6)
+
+
+            if data_table is not None:
+                plt.sca(ax1)
+                eb1 = plt.errorbar(Time(data_table["epoch"][seppa_indices],format='mjd').decimalyear,
+                             data_table["quant1"][seppa_indices],
+                             yerr=data_table["quant1_err"][seppa_indices],fmt="x",color="orange",linestyle="",zorder=10)
+                eb1[-1][0].set_linestyle("--")
+                plt.sca(ax2)
+                eb2 = plt.errorbar(Time(data_table["epoch"][seppa_indices],format='mjd').decimalyear,
+                             data_table["quant2"][seppa_indices],
+                             yerr=data_table["quant2_err"][seppa_indices],fmt="x",color="orange",linestyle="",zorder=10)
+                eb2[-1][0].set_linestyle("--")
+
+                #Monte Carlo error for radec
+                ra_list = data_table["quant1"][radec_indices]
+                dec_list = data_table["quant2"][radec_indices]
+                ra_err_list = data_table["quant1_err"][radec_indices]
+                dec_err_list = data_table["quant2_err"][radec_indices]
+                sep_list,pa_list = orbitize.system.radec2seppa(ra_list,dec_list)
+                sep_err_list = np.zeros(ra_list.shape)
+                pa_err_list = np.zeros(ra_list.shape)
+                for myid,(ra,dec,ra_err,dec_err) in enumerate(zip(ra_list,dec_list,ra_err_list,dec_err_list)):
+                    mean = [ra,dec]
+                    cov=np.diag([ra_err**2,dec_err**2])
+                    radec_samples = np.random.multivariate_normal(mean,cov,size=200)
+                    sep_samples,pa_samples = orbitize.system.radec2seppa(radec_samples[:,0],radec_samples[:,1])
+                    sep_err_list[myid] = np.std(sep_samples)
+                    pa_err_list[myid] = np.std(pa_samples)
+
+                plt.sca(ax1)
+                plt.errorbar(Time(data_table["epoch"][radec_indices],format='mjd').decimalyear,
+                             sep_list,
+                             yerr=sep_err_list,fmt="x",color="red",linestyle="",zorder=10)
+                plt.sca(ax2)
+                plt.errorbar(Time(data_table["epoch"][radec_indices],format='mjd').decimalyear,
+                             pa_list,
+                             yerr=pa_err_list,fmt="x",color="red",linestyle="",zorder=10)
 
         return fig
 
