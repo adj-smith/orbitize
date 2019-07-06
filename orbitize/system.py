@@ -186,12 +186,12 @@ class System(object):
         for body_num in np.arange(self.num_secondary_bodies)+1:
 
             epochs = self.data_table['epoch'][self.body_indices[body_num]]
-            sma = params_arr[body_num-1]
-            ecc = params_arr[body_num]
-            inc = params_arr[body_num+1]
-            argp = params_arr[body_num+2]
-            lan = params_arr[body_num+3]
-            tau = params_arr[body_num+4]
+            sma = params_arr[6*(body_num-1)]
+            ecc = params_arr[6*(body_num-1)+1]
+            inc = params_arr[6*(body_num-1)+2]
+            argp = params_arr[6*(body_num-1)+3]
+            lan = params_arr[6*(body_num-1)+4]
+            tau = params_arr[6*(body_num-1)+5]
             plx = params_arr[6*self.num_secondary_bodies]
             sysrv = params_arr[6*self.num_secondary_bodies+1]
 
@@ -204,9 +204,15 @@ class System(object):
                 mass = None
             mtot = params_arr[-1]
 
-            raoff, decoff, vz = kepler.calc_orbit(
+            raoff_tmp, decoff_tmp, vz_tmp = kepler.calc_orbit(
                 epochs, sma, ecc, inc, argp, lan, tau, plx, mtot, mass=mass, tau_ref_epoch=self.tau_ref_epoch
             )
+            raoff = np.zeros(self.data_table['epoch'].shape)+np.nan
+            decoff = np.zeros(self.data_table['epoch'].shape)+np.nan
+            vz = np.zeros(self.data_table['epoch'].shape)+np.nan
+            raoff[self.body_indices[body_num]] = raoff_tmp
+            decoff[self.body_indices[body_num]] = decoff_tmp
+            vz[self.body_indices[body_num]] = vz_tmp
 
             if len(raoff[self.radec[body_num]]) > 0: # (prevent empty array dimension errors)
                 model[self.radec[body_num], 0] = raoff[self.radec[body_num]]

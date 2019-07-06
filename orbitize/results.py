@@ -305,7 +305,12 @@ class Results(object):
             samples = self.post[:,param_indices] # Keep only chains for selected parameters
             if 'labels' not in corner_kwargs: # Use default labels if user didn't already supply them
                 # Necessary to index a list with another list
-                reduced_labels_list = [default_labels[i] for i in param_indices]
+                reduced_labels_list = []
+                for i in param_indices:
+                    if i < num_objects*6:
+                        reduced_labels_list.append(default_labels[i%6]+" (#{0})".format(int(i//6)))
+                    else:
+                        reduced_labels_list.append(default_labels[i-(num_objects-1)*6])
                 corner_kwargs['labels'] = reduced_labels_list
         else:
             samples = self.post
@@ -400,12 +405,12 @@ class Results(object):
             if object_to_plot > num_objects:
                 return None
 
-            sma = self.post[:,dict_of_indices['sma']]
-            ecc = self.post[:,dict_of_indices['ecc']]
-            inc = self.post[:,dict_of_indices['inc']]
-            aop = self.post[:,dict_of_indices['aop']]
-            pan = self.post[:,dict_of_indices['pan']]
-            tau = self.post[:,dict_of_indices['tau']]
+            sma = self.post[:,dict_of_indices['sma']+(object_to_plot-1)*6]
+            ecc = self.post[:,dict_of_indices['ecc']+(object_to_plot-1)*6]
+            inc = self.post[:,dict_of_indices['inc']+(object_to_plot-1)*6]
+            aop = self.post[:,dict_of_indices['aop']+(object_to_plot-1)*6]
+            pan = self.post[:,dict_of_indices['pan']+(object_to_plot-1)*6]
+            tau = self.post[:,dict_of_indices['tau']+(object_to_plot-1)*6]
 
             # Then, get the other parameters
             if remainder == 3: # have samples for parallax, system rv, and mtot
