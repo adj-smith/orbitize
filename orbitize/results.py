@@ -264,29 +264,41 @@ class Results(object):
             'pan': 4,
             'epp': 5
         }
+        num_orb_param = self.post.shape[1] # number of orbital parameters (+ mass, parallax)
+        num_objects,remainder = np.divmod(num_orb_param,6)
+        have_mtot_and_plx = remainder == 2
+        have_mtot_and_plx_and_sysrv = remainder == 3
         # Define array of default axis labels (overwritten if user specifies list)
-        default_labels = [
-            'a [au]',
-            'ecc',
-            'inc [rad]',
-            '$\omega$ [rad]',
-            '$\Omega$ [rad]',
-            '$\\tau$',
-            '$\pi$ [mas]',
-            '$V_{z,sys}$ [km/s]',
-            '$M_T$ [Msol]'
-        ]
+        if have_mtot_and_plx:
+            default_labels = [
+                'a [au]',
+                'ecc',
+                'inc [rad]',
+                '$\omega$ [rad]',
+                '$\Omega$ [rad]',
+                '$\\tau$',
+                '$\pi$ [mas]',
+                '$M_T$ [Msol]'
+            ]
+        elif have_mtot_and_plx_and_sysrv:
+            default_labels = [
+                'a [au]',
+                'ecc',
+                'inc [rad]',
+                '$\omega$ [rad]',
+                '$\Omega$ [rad]',
+                '$\\tau$',
+                '$\pi$ [mas]',
+                '$V_{z,sys}$ [km/s]',
+                '$M_T$ [Msol]'
+            ]
         if len(param_list)>0: # user chose to plot specific parameters only
-            num_orb_param = self.post.shape[1] # number of orbital parameters (+ mass, parallax)
-            num_objects,remainder = np.divmod(num_orb_param,6)
-            have_mtot_and_plx = remainder == 2
-            have_mtot_and_plx_and_sysrv = remainder == 3
             param_indices = []
             for param in param_list:
                 if param=='sysrv':
                     if have_mtot_and_plx_and_sysrv:
                         param_indices.append(num_orb_param-2) # the 2nd last index
-                if param=='plx':
+                elif param=='plx':
                     if have_mtot_and_plx:
                         param_indices.append(num_orb_param-2) # the 2nd last index
                     elif have_mtot_and_plx_and_sysrv:
@@ -321,7 +333,7 @@ class Results(object):
         return figure
 
 
-    def plot_orbits(self, parallax=None, total_mass=None, object_mass=0,
+    def plot_orbits(self, parallax=None,system_rv=None, total_mass=None, object_mass=0,
                     object_to_plot=1, start_mjd=51544.,
                     num_orbits_to_plot=100, num_epochs_to_plot=100,
                     square_plot=True, show_colorbar=True, cmap=cmap,
@@ -337,6 +349,7 @@ class Results(object):
             parallax (float): parallax (in mas), however, if plx_err was passed
                 to system, then this is ignored and the posterior samples for
                 plx will be used instead (default: None)
+            system_rv (float): System radial velocity [km/s].
             total_mass (float): total mass of system in solar masses, however,
                 if mass_err was passed to system, then this is ignored and the
                 posterior samples for mtot will be used instead (default: None)
@@ -416,6 +429,13 @@ class Results(object):
             if remainder == 3: # have samples for parallax, system rv, and mtot
                 plx = self.post[:,-3]
                 sysrv = self.post[:,-2]
+                mtot = self.post[:,-1]
+            elif remainder == 2: # have samples for parallax, system rv, and mtot
+                plx = self.post[:,-2]
+                if system_rv is not None:
+                    sysrv = np.ones(len(sma))*system_rv
+                else:
+                    raise Exception('results.Results.plot_orbits(): system radial velocity must be provided if not part of samples')
                 mtot = self.post[:,-1]
             else: # otherwise make arrays out of user provided value
                 if total_mass is not None:
@@ -499,6 +519,8 @@ class Results(object):
             ax.set_ylabel('$\Delta$Dec [mas]')
             ax.locator_params(axis='x', nbins=6)
             ax.locator_params(axis='y', nbins=6)
+            plt.xlim([-3000,3000])
+            plt.ylim([-3000,3000])
 
             if data_table is not None:
                 plt.errorbar(data_table["quant1"][radec_indices],data_table["quant2"][radec_indices],
@@ -612,7 +634,7 @@ class Results(object):
         return fig
 
 
-    def plot_rvs(self, parallax=None, total_mass=None, object_mass=0,
+    def plot_rvs(self, parallax=None, system_rv=None,total_mass=None, object_mass=0,
                     object_to_plot=1, start_mjd=51544.,
                     num_orbits_to_plot=100, num_epochs_to_plot=100, show_colorbar=True, cmap=cmap,
                     end_year = 2025.0,
@@ -628,6 +650,7 @@ class Results(object):
             parallax (float): parallax (in mas), however, if plx_err was passed
                 to system, then this is ignored and the posterior samples for
                 plx will be used instead (default: None)
+            system_rv (float): System radial velocity [km/s].
             total_mass (float): total mass of system in solar masses, however,
                 if mass_err was passed to system, then this is ignored and the
                 posterior samples for mtot will be used instead (default: None)
@@ -691,17 +714,24 @@ class Results(object):
             if object_to_plot > num_objects:
                 return None
 
-            sma = self.post[:,dict_of_indices['sma']]
-            ecc = self.post[:,dict_of_indices['ecc']]
-            inc = self.post[:,dict_of_indices['inc']]
-            aop = self.post[:,dict_of_indices['aop']]
-            pan = self.post[:,dict_of_indices['pan']]
-            tau = self.post[:,dict_of_indices['tau']]
+            sma = self.post[:,dict_of_indices['sma']+(object_to_plot-1)*6]
+            ecc = self.post[:,dict_of_indices['ecc']+(object_to_plot-1)*6]
+            inc = self.post[:,dict_of_indices['inc']+(object_to_plot-1)*6]
+            aop = self.post[:,dict_of_indices['aop']+(object_to_plot-1)*6]
+            pan = self.post[:,dict_of_indices['pan']+(object_to_plot-1)*6]
+            tau = self.post[:,dict_of_indices['tau']+(object_to_plot-1)*6]
 
             # Then, get the other parameters
             if remainder == 3: # have samples for parallax,system rv, and mtot
                 plx = self.post[:,-3]
                 sysrv = self.post[:,-2]
+                mtot = self.post[:,-1]
+            elif remainder == 2: # have samples for parallax, system rv, and mtot
+                plx = self.post[:,-2]
+                if system_rv is not None:
+                    sysrv = np.ones(len(sma))*system_rv
+                else:
+                    raise Exception('results.Results.plot_orbits(): system radial velocity must be provided if not part of samples')
                 mtot = self.post[:,-1]
             else: # otherwise make arrays out of user provided value
                 if total_mass is not None:
