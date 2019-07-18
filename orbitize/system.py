@@ -24,6 +24,8 @@ class System(object):
             Default is 58849 (Jan 1, 2020).
         results (list of orbitize.results.Results): results from an orbit-fit
             will be appended to this list as a Results class
+        coplanar: Assumes coplanar planets. Only uses the inclination and longitude of ascending node of the first
+            secondary object, ignore the other ones, but still sample them.
 
     Users should initialize an instance of this class, then overwrite
     priors they wish to customize.
@@ -45,7 +47,7 @@ class System(object):
     """
     def __init__(self, num_secondary_bodies, data_table, system_mass,
                  plx, mass_err=0, plx_err=0, sysrv=0, sysrv_err=0, restrict_angle_ranges=None,
-                 tau_ref_epoch=58849, fit_secondary_mass=False, results=None):
+                 tau_ref_epoch=58849, fit_secondary_mass=False, results=None, coplanar = False):
 
         self.num_secondary_bodies = num_secondary_bodies
         self.sys_priors = []
@@ -53,6 +55,8 @@ class System(object):
         self.results = []
         self.fit_secondary_mass = fit_secondary_mass
         self.tau_ref_epoch = tau_ref_epoch
+
+        self.coplanar = coplanar
 
         #
         # Group the data in some useful ways
@@ -182,15 +186,19 @@ class System(object):
         else:
             model = np.zeros((len(self.data_table), 2, params_arr.shape[1]))
 
+        if self.coplanar:
+            inc = params_arr[2]
+            lan = params_arr[4]
 
         for body_num in np.arange(self.num_secondary_bodies)+1:
 
             epochs = self.data_table['epoch'][self.body_indices[body_num]]
             sma = params_arr[6*(body_num-1)]
             ecc = params_arr[6*(body_num-1)+1]
-            inc = params_arr[6*(body_num-1)+2]
+            if not self.coplanar:
+                inc = params_arr[6*(body_num-1)+2]
+                lan = params_arr[6*(body_num-1)+4]
             argp = params_arr[6*(body_num-1)+3]
-            lan = params_arr[6*(body_num-1)+4]
             tau = params_arr[6*(body_num-1)+5]
             plx = params_arr[6*self.num_secondary_bodies]
             sysrv = params_arr[6*self.num_secondary_bodies+1]
