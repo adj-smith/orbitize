@@ -481,14 +481,14 @@ class MCMC(Sampler):
             # print progress statement
             if i%5==0:
                 print(str(i)+'/'+str(nsteps)+' steps completed',end='\r')
-            if self.save_intermediate is not None and i%10000==0:
-                print('Saving chain '+self.save_intermediate.replace(".fits","_step"+str(i)+".fits"))
+            if self.save_intermediate is not None and i%5000==0:
+                print('Saving chain '+self.save_intermediate)
                 hdulist = pyfits.HDUList()
                 hdulist.append(pyfits.PrimaryHDU(data=sampler.chain[:,:,0:i//thin,:]))
                 try:
-                    hdulist.writeto(self.save_intermediate.replace(".fits","_"+str(i)+"steps.fits"), overwrite=True)
+                    hdulist.writeto(self.save_intermediate, overwrite=True)
                 except TypeError:
-                    hdulist.writeto(self.save_intermediate.replace(".fits","_"+str(i)+"steps.fits"), clobber=True)
+                    hdulist.writeto(self.save_intermediate, clobber=True)
                 hdulist.close()
         print('')
 
