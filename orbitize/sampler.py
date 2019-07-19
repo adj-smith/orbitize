@@ -7,6 +7,7 @@ import abc
 
 import emcee
 import ptemcee
+import astropy.io.fits as pyfits
 
 import orbitize.lnlike
 import orbitize.priors
@@ -318,6 +319,7 @@ class MCMC(Sampler):
         self.num_temps = num_temps
         self.num_walkers = num_walkers
         self.num_threads = num_threads
+        self.save_intermediate = None
 
         # create an empty results object
         self.results = orbitize.results.Results(
@@ -479,6 +481,15 @@ class MCMC(Sampler):
             # print progress statement
             if i%5==0:
                 print(str(i)+'/'+str(nsteps)+' steps completed',end='\r')
+            if self.save_intermediate is not None and i%10000==0:
+                print('Saving chain '+self.save_intermediate.replace(".fits","_step"+str(i)+".fits"))
+                hdulist = pyfits.HDUList()
+                hdulist.append(pyfits.PrimaryHDU(data=sampler.chain[:,:,0:i//thin,:]))
+                try:
+                    hdulist.writeto(self.save_intermediate.replace(".fits","_"+str(i)+"steps.fits"), overwrite=True)
+                except TypeError:
+                    hdulist.writeto(self.save_intermediate.replace(".fits","_"+str(i)+"steps.fits"), clobber=True)
+                hdulist.close()
         print('')
 
         self.curr_pos = pos
