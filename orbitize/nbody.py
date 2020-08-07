@@ -32,41 +32,44 @@ def calc_orbit(epochs, sma, ecc, inc, aop, pan, tau, plx, mtot, tau_ref_epoch=0)
     # run the simulation forward in time until the last epoch
     # return the position & velocity of the planet at each of the epochs
 
-    import rebound
+    
+    import os
     import numpy as np
+    import astropy.table as table
+    import astropy
+    import astropy.units as u
+    import orbitize
+    import orbitize.read_input as read_input
+    import orbitize.kepler as kepler
+    import orbitize.system as system
+    import orbitize.basis as basis
+    import orbitize.priors as priors
+    import orbitize.driver as driver
+    import rebound
+
+"""
+For Sofia:
+
+orbitize.kepler.calc_orbit(epochs, sma, ecc, inc, aop, pan, tau, plx, mtot, 
+    mass_for_Kamp=None, tau_ref_epoch=0, tolerance=1e-09, max_iter=100)
+
+rebound.OrbitPlot(sim, figsize=None, fancy=False, slices=0, xlim=None, ylim=None, 
+    unitlabel=None, color=False, periastron=False, orbit_type='trail', lw=1.0, 
+    plotparticles=[], primary=None, Narc=128)
+
+"""
+#add additional arg for mstar/mplanet?
+sim = rebound.Simulation()
+sim.units = ('AU','days','Msun')
+sim.add(m = mtot-somem )
+sim.add(m = , a = , e = , inc = , Omega = , omega = )
 
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-#for testing purposes only:
-import os
-import numpy as np
-import astropy.table as table
-import astropy
-import astropy.units as u
-import orbitize
-import orbitize.read_input as read_input
-import orbitize.kepler as kepler
-import orbitize.system as system
-import orbitize.basis as basis
-import orbitize.priors as priors
-import orbitize.driver as driver
-
-import rebound
-
+#for temp. testing purposes only
 def test_1planet():
     """
     Sanity check that things agree for 1 planet case
