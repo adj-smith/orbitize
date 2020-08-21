@@ -1,4 +1,10 @@
-
+import os
+import numpy as np
+import astropy
+import astropy.units as u
+import orbitize.basis as basis
+import rebound
+import matplotlib.pylab as plt
 
 def calc_orbit(epochs, sma, ecc, inc, aop, pan, tau, plx, mtot, tau_ref_epoch=0):
     """
@@ -31,118 +37,55 @@ def calc_orbit(epochs, sma, ecc, inc, aop, pan, tau, plx, mtot, tau_ref_epoch=0)
     # initialze a 2-body system with the input orbital parameters, starting at the first epoch
     # run the simulation forward in time until the last epoch
     # return the position & velocity of the planet at each of the epochs
-
     
-    import os
-    import numpy as np
-    import astropy.table as table
-    import astropy
-    import astropy.units as u
-    import orbitize
-    import orbitize.read_input as read_input
-    import orbitize.kepler as kepler
-    import orbitize.system as system
-    import orbitize.basis as basis
-    import orbitize.priors as priors
-    import orbitize.driver as driver
-    import rebound
 
-"""
-For Sofia:
-
-orbitize.kepler.calc_orbit(epochs, sma, ecc, inc, aop, pan, tau, plx, mtot, 
-    mass_for_Kamp=None, tau_ref_epoch=0, tolerance=1e-09, max_iter=100)
-
-rebound.OrbitPlot(sim, figsize=None, fancy=False, slices=0, xlim=None, ylim=None, 
-    unitlabel=None, color=False, periastron=False, orbit_type='trail', lw=1.0, 
-    plotparticles=[], primary=None, Narc=128)
-
-"""
-#add additional arg for mstar/mplanet?
-sim = rebound.Simulation()
-sim.units = ('AU','days','Msun')
-sim.add(m = mtot-somem )
-sim.add(m = , a = , e = , inc = , Omega = , omega = )
-
-
-
-
-
-
-#for temp. testing purposes only
-def test_1planet():
-    """
-    Sanity check that things agree for 1 planet case
-    """
-    # generate a planet orbit
-    sma = 1
-    ecc = 0.1
-    inc = np.radians(45)
-    aop = np.radians(45)
-    pan = np.radians(45)
-    tau = 0.5
-    plx = 1
-    mtot = 1
-    tau_ref_epoch = 0
-    mjup = u.Mjup.to(u.Msun)
-    mass_b = 12 * mjup
-
-    epochs = np.linspace(0, 300, 100) + tau_ref_epoch # nearly the full period, MJD
-
-    ra_model, dec_model, vz_model = kepler.calc_orbit(epochs, sma, ecc, inc, aop, pan, tau, plx, mtot, tau_ref_epoch=tau_ref_epoch)
-
-    # generate some fake measurements just to feed into system.py to test bookkeeping
-    t = table.Table([epochs, np.ones(epochs.shape, dtype=int), ra_model, np.zeros(ra_model.shape), dec_model, np.zeros(dec_model.shape)], 
-                     names=["epoch", "object" ,"raoff", "raoff_err","decoff","decoff_err"])
-    filename = os.path.join(orbitize.DATADIR, "rebound_1planet.csv")
-    t.write(filename)
-
-    # create the orbitize system and generate model predictions using the ground truth
-    astrom_dat = read_input.read_file(filename)
-
-    sys = system.System(1, astrom_dat, mtot, plx, tau_ref_epoch=tau_ref_epoch)
-
-    params = np.array([sma, ecc, inc, aop, pan, tau, plx, mtot])
-    radec_orbitize, _ = sys.compute_model(params)
-    ra_orb = radec_orbitize[:, 0]
-    dec_orb = radec_orbitize[:, 1]
-
-
-    # now project the orbit with rebound
-    manom = basis.tau_to_manom(epochs[0], sma, mtot, tau, tau_ref_epoch)
-    
+    mnm = basis.tau_to_manom(epochs[0], sma, mtot, tau, tau_ref_epoch)
     sim = rebound.Simulation()
-    sim.units = ('yr', 'AU', 'Msun')
-
-
-    # add star
-    sim.add(m=mtot - mass_b)
-
-    # add one planet
-    sim.add(m=mass_b, a=sma, e=ecc, M=manom, omega=aop, Omega=pan+np.pi/2, inc=inc)
-    ps = sim.particles
-
+    sim.units = ('AU','yr','Msun')
+    sim.add(m = mtot) #give all mass to star, planet mass = 0
+    sim.add(m = 0, a = sma, e = ecc, inc = inc, Omega = pan, omega =aop, M =mnm)
     sim.move_to_com()
 
-    # Use Wisdom Holman integrator (fast), with the timestep being < 5% of inner planet's orbital period
-    sim.integrator = "ias15"
+    ps = sim.particles #for easier calls
+
+    sim.integrator = "ias15" 
     sim.dt = ps[1].P/1000.
 
-    # integrate and measure star/planet separation 
-    ra_reb = []
-    dec_reb = []
+    tx = len(epochs)
+    te = np.arange(0,tx)
+    ra_reb = np.zeros(tx)
+    dec_reb = np.zeros(tx)
+    vz = np.zeros(tx)
 
-    for t in epochs:
+    for t in te:
         sim.integrate(t/365.25)
         
-        ra_reb.append(-(ps[1].x - ps[0].x)) # ra is negative x
-        dec_reb.append(ps[1].y - ps[0].y)
-        
-    ra_reb = np.array(ra_reb)
-    dec_reb = np.array(dec_reb)
+        ra_reb[t] = -(ps[1].x - ps[0].x) # ra is negative x
+        dec_reb[t] = ps[1].y - ps[0].y
+        vz[t] = ps[1].vz
 
-    diff_ra = ra_reb - ra_orb/plx
-    diff_dec = dec_reb - dec_orb/plx
 
-    assert np.all(np.abs(diff_ra) < 1e-9)
-    assert np.all(np.abs(diff_dec) < 1e-9)
+    return plx*ra_reb, plx*dec_reb, vz
+
+
+sma = 1
+ecc = 0.1
+inc = np.radians(45)
+aop = np.radians(45)
+pan = np.radians(45)
+tau = 0.5
+plx = 1
+mtot = 1
+tau_ref_epoch = 0
+epochs = np.linspace(0, 300, 5) + tau_ref_epoch # nearly the full period, MJD
+
+import orbitize.kepler
+
+print('rebound test: ',calc_orbit(epochs, sma,ecc,inc,aop,pan,tau,plx,mtot,tau_ref_epoch))
+print('kepler: ',orbitize.kepler.calc_orbit(epochs, sma,ecc,inc,aop,pan,tau,plx,mtot,tau_ref_epoch))
+
+   
+
+
+
+    
