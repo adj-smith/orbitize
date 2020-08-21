@@ -43,7 +43,7 @@ def calc_orbit(epochs, sma, ecc, inc, aop, pan, tau, plx, mtot, tau_ref_epoch=0)
     sim = rebound.Simulation()
     sim.units = ('AU','yr','Msun')
     sim.add(m = mtot) #give all mass to star, planet mass = 0
-    sim.add(m = 0, a = sma, e = ecc, inc = inc, Omega = pan, omega =aop, M =mnm)
+    sim.add(m = 0, a = sma, e = ecc, inc = inc, Omega = pan + np.pi/2, omega =aop, M =mnm)
     sim.move_to_com()
 
     ps = sim.particles #for easier calls
@@ -52,17 +52,18 @@ def calc_orbit(epochs, sma, ecc, inc, aop, pan, tau, plx, mtot, tau_ref_epoch=0)
     sim.dt = ps[1].P/1000.
 
     tx = len(epochs)
-    te = np.arange(0,tx)
+    te = epochs-epochs[0]
     ra_reb = np.zeros(tx)
     dec_reb = np.zeros(tx)
     vz = np.zeros(tx)
 
-    for t in te:
+    for i,t in enumerate(te):
+        print(i,t)
         sim.integrate(t/365.25)
         
-        ra_reb[t] = -(ps[1].x - ps[0].x) # ra is negative x
-        dec_reb[t] = ps[1].y - ps[0].y
-        vz[t] = ps[1].vz
+        ra_reb[i] = -(ps[1].x - ps[0].x) # ra is negative x
+        dec_reb[i] = ps[1].y - ps[0].y
+        vz[i] = ps[1].vz
 
 
     return plx*ra_reb, plx*dec_reb, vz
@@ -82,7 +83,7 @@ epochs = np.linspace(0, 300, 5) + tau_ref_epoch # nearly the full period, MJD
 import orbitize.kepler
 
 print('rebound test: ',calc_orbit(epochs, sma,ecc,inc,aop,pan,tau,plx,mtot,tau_ref_epoch))
-print('kepler: ',orbitize.kepler.calc_orbit(epochs, sma,ecc,inc,aop,pan,tau,plx,mtot,tau_ref_epoch))
+print('Kepler: ',orbitize.kepler.calc_orbit(epochs, sma,ecc,inc,aop,pan,tau,plx,mtot,tau_ref_epoch))
 
    
 
