@@ -78,15 +78,22 @@ tau = 0.5
 plx = 1
 mtot = 1
 tau_ref_epoch = 0
-epochs = np.linspace(0, 300, 5) + tau_ref_epoch # nearly the full period, MJD
+epochs = np.linspace(0, 300, 100) + tau_ref_epoch # nearly the full period, MJD
 
 import orbitize.kepler
+import matplotlib.pyplot as plt
 
-print('rebound test: ',calc_orbit(epochs, sma,ecc,inc,aop,pan,tau,plx,mtot,tau_ref_epoch))
-print('Kepler: ',orbitize.kepler.calc_orbit(epochs, sma,ecc,inc,aop,pan,tau,plx,mtot,tau_ref_epoch))
+#Analysis
+rra, rde, rvz = calc_orbit(epochs, sma,ecc,inc,aop,pan,tau,plx,mtot,tau_ref_epoch)
+kra, kde, kvz = orbitize.kepler.calc_orbit(epochs, sma,ecc,inc,aop,pan,tau,plx,mtot,tau_ref_epoch)
 
-   
+delta_ra = abs(rra-kra)
+delta_de = abs(rde-kde)
+delta_vz = abs(rvz-kvz)
 
-
-
-    
+plt.plot(epochs, delta_ra, 'r')
+plt.plot(epochs, delta_de, 'c')
+plt.plot(epochs, delta_vz, 'm')
+plt.xlabel('Epochs (Earth years)')
+plt.ylabel('Abs Value of Kepler and Rebound Solvers')
+plt.show()
