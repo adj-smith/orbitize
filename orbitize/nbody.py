@@ -78,22 +78,33 @@ tau = 0.5
 plx = 1
 mtot = 1
 tau_ref_epoch = 0
-epochs = np.linspace(0, 300, 100) + tau_ref_epoch # nearly the full period, MJD
+epochs = np.linspace(0, 1000, 1000) + tau_ref_epoch # nearly the full period, MJD
+
 
 import orbitize.kepler
 import matplotlib.pyplot as plt
 
 #Analysis
 rra, rde, rvz = calc_orbit(epochs, sma,ecc,inc,aop,pan,tau,plx,mtot,tau_ref_epoch)
-kra, kde, kvz = orbitize.kepler.calc_orbit(epochs, sma,ecc,inc,aop,pan,tau,plx,mtot,tau_ref_epoch)
+kra, kde, kvz = orbitize.kepler.calc_orbit(epochs, sma,ecc,inc,aop,pan,tau,plx,mtot, mass _for_Kamp = mtot, tau_ref_epoch)
 
 delta_ra = abs(rra-kra)
 delta_de = abs(rde-kde)
 delta_vz = abs(rvz-kvz)
 
-plt.plot(epochs, delta_ra, 'r')
-plt.plot(epochs, delta_de, 'c')
-plt.plot(epochs, delta_vz, 'm')
+plt.figure()
+plt.subplot(01)
+plt.plot(epochs, delta_ra, 'r', label = 'RA offsets')
+plt.plot(epochs, delta_de, 'c', label = 'Dec offsets')
 plt.xlabel('Epochs (Earth years)')
-plt.ylabel('Abs Value of Kepler and Rebound Solvers')
+plt.ylabel('Abs Value of Kepler and Rebound Solvers (arcseconds)')
+plt.legend()
+
+plt.subplot(02)
+plt.plot(epochs, delta_vz, 'm')
+
+
 plt.show()
+
+
+
