@@ -80,31 +80,72 @@ mtot = 1
 tau_ref_epoch = 0
 epochs = np.linspace(0, 1000, 1000) + tau_ref_epoch # nearly the full period, MJD
 
-
+import time
 import orbitize.kepler
 import matplotlib.pyplot as plt
 
 #Analysis
-rra, rde, rvz = calc_orbit(epochs, sma,ecc,inc,aop,pan,tau,plx,mtot,tau_ref_epoch)
-kra, kde, kvz = orbitize.kepler.calc_orbit(epochs, sma,ecc,inc,aop,pan,tau,plx,mtot, mass _for_Kamp = mtot, tau_ref_epoch)
 
-delta_ra = abs(rra-kra)
-delta_de = abs(rde-kde)
-delta_vz = abs(rvz-kvz)
+def time_analysis(nt):
+    #where nt is the longest time you want to run the solver for
+    te = np.linspace(0,nt,1000) #range of number of epochs you want to test
+    index_name = np.arange(0,len(te)) #simple index for following 'for' loop
 
-plt.figure()
-plt.subplot(01)
-plt.plot(epochs, delta_ra, 'r', label = 'RA offsets')
-plt.plot(epochs, delta_de, 'c', label = 'Dec offsets')
-plt.xlabel('Epochs (Earth years)')
-plt.ylabel('Abs Value of Kepler and Rebound Solvers (arcseconds)')
-plt.legend()
+    treb = np.zeros(len(te)) #time rebound takes, loadable array
+    tkep = np.zeros(len(te)) #time kepler takes, loadable array
+    num_epochs = np.zeros(len(te)) #number of epochs measured in each calculation, will be the x axis
 
-plt.subplot(02)
-plt.plot(epochs, delta_vz, 'm')
+    for i in index_name:
+        var_epoch = np.linspace(0, te[i], 100) + tau_ref_epoch #what will be plugged into each solver
+        num_e = te[i]/100 #number of epochs used
+        num_epochs[i] = num_e #number of epochs for each point
+
+        t1 = time.time()
+        calc_orbit(var_epoch, sma,ecc,inc,aop,pan,tau,plx,mtot,tau_ref_epoch)
+        t2 = time.time()
+        orbitize.kepler.calc_orbit(var_epoch, sma,ecc,inc,aop,pan,tau,plx,mtot, tau_ref_epoch)
+        t3 = time.time()
+        tr = t2-t1
+        tk = t3-t2
+
+        treb[i] = tr
+        tkep[i] = tk
+
+    plt.plot(num_epochs, treb, label = 'Rebound')
+    plt.plot(num_epochs, tkep, label = 'Current Keplerian')
+    plt.ylabel('Time it takes to solve (seconds)')
+    plt.xlabel('Number of Epochs')
+
+    axes1 = plt.gca()
+    axes2 = axes1.twiny()
+    axes2.set_xticks([.33, .66, .99])
+    axes1.set_xlabel("Number of Epochs")
+    axes2.set_xlabel("Total time calculated (Earth years)")
+ 
+
+    plt.legend()
+    plt.show()
 
 
-plt.show()
+
+def calc_diff():
+    rra, rde, rvz = calc_orbit(epochs, sma,ecc,inc,aop,pan,tau,plx,mtot,tau_ref_epoch)
+    kra, kde, kvz = orbitize.kepler.calc_orbit(epochs, sma,ecc,inc,aop,pan,tau,plx,mtot, tau_ref_epoch)
+
+    delta_ra = abs(rra-kra)
+    delta_de = abs(rde-kde)
+    delta_vz = abs(rvz-kvz)
+
+
+    plt.plot(epochs, delta_ra, 'r', label = 'RA offsets')
+    plt.plot(epochs, delta_de, 'c', label = 'Dec offsets')
+    plt.xlabel('Epochs (Earth years)')
+    plt.ylabel('Abs Value of Kepler and Rebound Solvers (arcseconds)')
+    plt.legend()
+    #plt.plot(epochs, delta_vz, 'm')
+    plt.show()
+
+
 
 
 
