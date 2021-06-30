@@ -48,7 +48,7 @@ def calc_orbit(epochs, sma, ecc, inc, aop, pan, tau, plx, mtot, tau_ref_epoch):
     tx = len(epochs)
     te = epochs-epochs[0]   
 
-    indv = len(sma)
+    indv = len(sma) #number of planets
     ra_reb = np.zeros((tx, indv))
     dec_reb = np.zeros((tx, indv))
     vz = np.zeros((tx, indv))
@@ -56,21 +56,21 @@ def calc_orbit(epochs, sma, ecc, inc, aop, pan, tau, plx, mtot, tau_ref_epoch):
     for i in np.arange(0,indv):
         mnm = basis.tau_to_manom(epochs[0], sma[i], mtot, tau[i], tau_ref_epoch) #calculating mean anomaly
         sim.add(m = 0, a = sma[i], e = ecc[i], inc = inc[i], Omega = pan[i] + np.pi/2, omega =aop[i], M =mnm)
-        
         sim.move_to_com()
         sim.integrator = "ias15" 
         sim.dt = ps[1].P/1000.
 
-        for j,t in enumerate(te):
-            #print(j,t)
-            print(type(i+1))
-            sim.integrate(t/365.25)
+
+    for j,t in enumerate(te):
+        #print(j,t)
+        #print(type(i+1))
+        sim.integrate(t/365.25)
+
+        for i in np.arange(0,indv):
             ra_reb[j,i] = -(ps[int(i+1)].x - ps[0].x) # ra is negative x
             dec_reb[j,i] = ps[int(i+1)].y - ps[0].y
             vz[j,i] = ps[int(i+1)].vz
 
-        
- 
 
     pxr = plx*ra_reb #adjusting for parallax
     pxd = plx*dec_reb #adjusting for parallax
@@ -78,23 +78,38 @@ def calc_orbit(epochs, sma, ecc, inc, aop, pan, tau, plx, mtot, tau_ref_epoch):
     return pxr, pxd, vz
 
 #Test Data
-"""
-sma = np.array([1])
-ecc = np.array([0.1])
+
+#Single Body
+sma = np.array([10])
+ecc = np.array([0.55])
 inc = np.array([np.radians(45)])
 aop = np.array([np.radians(45)])
 pan = np.array([np.radians(45)])
-tau = np.array([0.5])
+tau = np.array([0.75])
 plx = np.array([1])
-mtot = np.array([1])
+mtot = np.array([3])
 tau_ref_epoch = np.array([0])
-epochs = np.linspace(0, 1000, 1000) + tau_ref_epoch # nearly the full period, MJD
+epochs = np.linspace(0, 10000, 1000) + tau_ref_epoch # nearly the full period, MJD
+
+"""
+#10 Body
+sma = np.array([10,15,20,25,30,35,40,45,50,55])
+ecc = np.array([0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1])
+inc = np.array([np.radians(45), np.radians(45), np.radians(45), np.radians(45), np.radians(45), np.radians(45), np.radians(45), np.radians(45), np.radians(45), np.radians(45)])
+aop = np.array([np.radians(45), np.radians(40), np.radians(35), np.radians(30), np.radians(25), np.radians(20), np.radians(22), np.radians(33), np.radians(44), np.radians(55)])
+pan = np.array([np.radians(45), np.radians(45), np.radians(45), np.radians(45), np.radians(45), np.radians(45), np.radians(45), np.radians(45), np.radians(45), np.radians(45)])
+tau = np.array([0.75, 0.74, 0.73, 0.72, 0.71, 0.7, 0.69, 0.68, 0.67, 0.66])
+plx = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+mtot = np.array([3])
+tau_ref_epoch = np.array([0])
+#epochs = np.linspace(0, 1000, 1000) + tau_ref_epoch # nearly the full period, MJD
 """
 
 import orbitize.kepler
+e1 = 1000
 
+"""
 #From System HR-8799
-epochs = np.linspace(0, 1000, 1000)
 sma = np.array([71, 43, 26, 16])
 ecc = np.array([.02, .02, .13, .12])
 inc = np.array([0.47123, 0.47123, 0.47123, 0.47123])
@@ -104,13 +119,9 @@ tau = np.array([0.54, 0.50, 0.79, 0.71])
 plx = np.array([7])
 mtot = np.array([1.49])
 tau_ref_epoch = 0
+"""
 
-"""
-x1,x2,x3 = (calc_orbit(epochs,sma,ecc,inc,aop,pan,tau,plx,mtot, tau_ref_epoch))
-y1,y2,y3 = (orbitize.kepler.calc_orbit(epochs,sma,ecc,inc,aop,pan,tau,plx,mtot, tau_ref_epoch))
-print('rebound:', x1[:7],',', x2[57],',',x3[57])
-print('Kepler:', y1[:7],',', y2[57],',', y3[57])
-"""
+
 
 #Analysis Functions
 
@@ -174,62 +185,77 @@ def calc_diff():
     print(rvz)
     print(kvz)
     """
-    Ar = np.zeros(1000) #planet A
-    Ad = np.zeros(1000)
-    Av = np.zeros(1000)
+    if len(sma)<=4:
 
-    Br = np.zeros(1000) #planet B
-    Bd = np.zeros(1000)
-    Bv = np.zeros(1000)
+        Br = np.zeros(e1) #planet B
+        Bd = np.zeros(e1)
+        Bv = np.zeros(e1)
+        """
+        Cr = np.zeros(e1) #planet C
+        Cd = np.zeros(e1)
+        Cv = np.zeros(e1)
+        
+        Dr = np.zeros(e1) #planet D
+        Dd = np.zeros(e1)
+        Dv = np.zeros(e1)
     
-    Cr = np.zeros(1000) #planet C
-    Cd = np.zeros(1000)
-    Cv = np.zeros(1000)
-    
-    Dr = np.zeros(1000) #planet D
-    Dd = np.zeros(1000)
-    Dv = np.zeros(1000)
+        Er = np.zeros(e1) #planet E
+        Ed = np.zeros(e1)
+        Ev = np.zeros(e1)
+        """
 
-
-    for i in np.arange(0,999):
-        i2 = int(i)
         
-        Ar[i] = delta_ra[i2,0] #first planet
-        Ad[i] = delta_de[i2,0]
-        Av[i] = delta_vz[i2,0]
+        for i in np.arange(0,e1-1):
+            i2 = int(i)
         
-        Br[i] = delta_ra[i2,1] #second planet
-        Bd[i] = delta_de[i2,1]
-        Bv[i] = delta_vz[i2,1]
+            Br[i] = delta_ra[i2,0] #first planet
+            Bd[i] = delta_de[i2,0]
+            Bv[i] = delta_vz[i2,0]
 
-        Cr[i] = delta_ra[i2,2] #third planet
-        Cd[i] = delta_de[i2,2]
-        Cv[i] = delta_vz[i2,2]
+            """
+            Cr[i] = delta_ra[i2,1] #second planet
+            Cd[i] = delta_de[i2,1]
+            Cv[i] = delta_vz[i2,1]
 
-        Dr[i] = delta_ra[i2,3] #fourth planet
-        Dd[i] = delta_de[i2,3]
-        Dv[i] = delta_vz[i2,3]
+            Dr[i] = delta_ra[i2,2] #third planet
+            Dd[i] = delta_de[i2,2]
+            Dv[i] = delta_vz[i2,2]
+
+            Er[i] = delta_ra[i2,3] #fourth planet
+            Ed[i] = delta_de[i2,3]
+            Ev[i] = delta_vz[i2,3]
+            """
+            
         
 
-    plt.plot(epochs, Ar, 'brown', label = 'Planet A: RA offsets') #first planet
-    plt.plot(epochs, Ad, 'red', label = 'Planet A: Dec offsets')
-    #plt.plot(epochs, Av, 'pink', label = 'Planet A: RV offsets')
+        plt.plot(epochs, Br, 'brown', label = 'Planet B: RA offsets') #first planet
+        plt.plot(epochs, Bd, 'red', label = 'Planet B: Dec offsets')
+        #plt.plot(epochs, Bv, 'pink', label = 'Planet B: RV offsets')
+        """
+        plt.plot(epochs, Cr, 'coral', label = 'Planet C: RA offsets') #second planet
+        plt.plot(epochs, Cd, 'orange', label = 'Planet C: Dec offsets')
+        #plt.plot(epochs, Cv, 'gold', label = 'Planet C: RV offsets')
 
-    plt.plot(epochs, Br, 'coral', label = 'Planet B: RA offsets') #second planet
-    plt.plot(epochs, Bd, 'darkorange', label = 'Planet B: Dec offsets')
-    #plt.plot(epochs, Bv, 'gold', label = 'Planet B: RV offsets')
+        plt.plot(epochs, Dr, 'greenyellow', label = 'Planet D: RA offsets') #third planet
+        plt.plot(epochs, Dd, 'green', label = 'Planet D: Dec offsets')
+        #plt.plot(epochs, Dv, 'darkgreen', label = 'Planet D: RV offsets')
+        
 
-    plt.plot(epochs, Cr, 'greenyellow', label = 'Planet C: RA offsets') #third planet
-    plt.plot(epochs, Cd, 'green', label = 'Planet C: Dec offsets')
-    #plt.plot(epochs, Cv, 'darkgreen', label = 'Planet C: RV offsets')
-
-    plt.plot(epochs, Dr, 'dodgerblue', label = 'Planet D: RA offsets') #fourth planet
-    plt.plot(epochs, Dd, 'blue', label = 'Planet D: Dec offsets')
-    #plt.plot(epochs, Dv, 'indigo', label = 'Planet D: RV offsets')
+        plt.plot(epochs, Er, 'dodgerblue', label = 'Planet E: RA offsets') #fourth planet
+        plt.plot(epochs, Ed, 'blue', label = 'Planet E: Dec offsets')
+        #plt.plot(epochs, Ev, 'indigo', label = 'Planet E: RV offsets')
+        """
+    else:
+        for i in np.arange(0,len(sma[0])):
+            break
 
     plt.xlabel('Epochs (Earth years)')
     plt.ylabel('Difference between Kepler and N-Body solver (milliarcseconds)')
     plt.legend()
     plt.show()
-    
-    
+
+"""
+opra, opde, opvz = calc_orbit(epochs, sma,ecc,inc,aop,pan,tau,plx,mtot,tau_ref_epoch)
+print(opra[0:3])
+""" 
+calc_diff()
