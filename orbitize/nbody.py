@@ -6,6 +6,10 @@ import orbitize.basis as basis
 import rebound
 import matplotlib.pylab as plt
 
+# TODO: add optional keyword argument that is an array of masses of planets (m_pl)
+# TODO: if m_pl is None, then assume masses of planets are zero
+# TODO: otherwise, m_star = mtot - sum(m_pl)
+
 def calc_orbit(epochs, sma, ecc, inc, aop, pan, tau, plx, mtot, tau_ref_epoch):
     """
     Solves for position for a set of input orbital elements using rebound.
